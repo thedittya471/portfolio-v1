@@ -1,4 +1,5 @@
 import Link from "next/link";
+import Image from "next/image";
 import DotField from "./components/dot-field";
 import ThemeToggle from "./components/theme-toggle";
 
@@ -14,7 +15,7 @@ export default function Home() {
           <DotField dotRadius={2} dotSpacing={12} cursorRadius={180} bulgeStrength={36} glowRadius={100} gradientFrom="rgba(145,145,145,0.5)" gradientTo="rgba(145,145,145,0.2)" glowColor="transparent" />
         </div>
         <div className="profile">
-          <div className="avatar" aria-hidden="true"><span>dm.</span></div>
+          <div className="avatar"><Image src="/avatar.png" alt="Dittya Maity’s illustrated avatar" width={96} height={96} priority unoptimized /></div>
           <div className="intro">
             <h1 id="name">Dittya Maity</h1>
             <p className="role">Software engineer <span> / </span> Full stack developer</p>
