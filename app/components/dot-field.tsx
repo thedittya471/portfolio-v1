@@ -70,6 +70,8 @@ const DotField = memo(({
     if (!canvas) return;
     const ctx = canvas.getContext('2d', { alpha: true });
     if (!ctx) return;
+    let hovered = false;
+    let ripples: { x: number; y: number; start: number }[] = [];
     const motion = window.matchMedia('(prefers-reduced-motion: reduce)');
     const dpr = Math.min(window.devicePixelRatio || 1, 2);
     let resizeTimer: ReturnType<typeof setTimeout>;
@@ -121,11 +123,22 @@ const DotField = memo(({
       dotsRef.current = dots;
     }
 
-    function onMouseMove(e: MouseEvent) {
-      if (motion.matches) return;
-      const s = sizeRef.current;
-      mouseRef.current.x = e.pageX - s.offsetX;
-      mouseRef.current.y = e.pageY - s.offsetY;
+    function onPointerMove(e: PointerEvent) {
+      if (motion.matches || e.pointerType === 'touch') return;
+      const rect = canvas!.getBoundingClientRect();
+      hovered = true;
+      mouseRef.current.x = e.clientX - rect.left;
+      mouseRef.current.y = e.clientY - rect.top;
+    }
+
+    function onPointerLeave() {
+      hovered = false;
+    }
+
+    function onPointerDown(e: PointerEvent) {
+      if (motion.matches || e.button !== 0) return;
+      const rect = canvas!.getBoundingClientRect();
+      ripples = [...ripples.slice(-4), { x: e.clientX - rect.left, y: e.clientY - rect.top, start: performance.now() }];
     }
 
     function updateMouseSpeed() {
@@ -151,8 +164,10 @@ const DotField = memo(({
       const p = propsRef.current;
       const len = dots.length;
       const t = frameCount * 0.02;
+      const now = performance.now();
+      ripples = motion.matches ? [] : ripples.filter(r => now - r.start < 1200);
 
-      const targetEngagement = Math.min(m.speed / 5, 1);
+      const targetEngagement = hovered && !motion.matches ? 1 : 0;
       engagement.current += (targetEngagement - engagement.current) * 0.06;
       if (engagement.current < 0.001) engagement.current = 0;
       const eng = engagement.current;
@@ -215,6 +230,17 @@ const DotField = memo(({
 
         let drawX = d.sx;
         let drawY = d.sy;
+        for (const ripple of ripples) {
+          const age = (now - ripple.start) / 1200;
+          const rx = d.ax - ripple.x;
+          const ry = d.ay - ripple.y;
+          const distance = Math.hypot(rx, ry);
+          const ring = age * 550;
+          const force = Math.exp(-Math.pow((distance - ring) / 30, 2)) * 28 * (1 - age);
+          const angle = Math.atan2(ry, rx);
+          drawX += Math.cos(angle) * force;
+          drawY += Math.sin(angle) * force;
+        }
         if (!motion.matches && (p.waveAmplitude as number) > 0) {
           drawY += Math.sin(d.ax * 0.03 + t) * (p.waveAmplitude as number);
           drawX += Math.cos(d.ay * 0.03 + t * 0.7) * (p.waveAmplitude as number) * 0.5;
@@ -248,7 +274,11 @@ const DotField = memo(({
     motion.addEventListener('change', resume);
     doResize();
     window.addEventListener('resize', resize);
-    window.addEventListener('mousemove', onMouseMove, { passive: true });
+    canvas.addEventListener('pointermove', onPointerMove, { passive: true });
+    canvas.addEventListener('pointerleave', onPointerLeave);
+    canvas.addEventListener('pointercancel', onPointerLeave);
+    canvas.addEventListener('pointerdown', onPointerDown);
+    window.addEventListener('blur', onPointerLeave);
     rafRef.current = requestAnimationFrame(tick);
 
     rebuildRef.current = () => {
@@ -263,7 +293,11 @@ const DotField = memo(({
       clearInterval(speedInterval);
       clearTimeout(resizeTimer);
       window.removeEventListener('resize', resize);
-      window.removeEventListener('mousemove', onMouseMove);
+      canvas.removeEventListener('pointermove', onPointerMove);
+      canvas.removeEventListener('pointerleave', onPointerLeave);
+      canvas.removeEventListener('pointercancel', onPointerLeave);
+      canvas.removeEventListener('pointerdown', onPointerDown);
+      window.removeEventListener('blur', onPointerLeave);
     };
   }, []);
 

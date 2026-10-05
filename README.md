@@ -1,4 +1,14 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+Dittya's portfolio with a PostgreSQL-backed admin panel.
+
+## Local setup
+
+1. Copy `.env.example` to `.env` and replace all three secrets.
+2. Run `docker compose up --build`.
+3. Open `http://localhost:3000` and `http://localhost:3000/admin`.
+
+If port 3000 is occupied, set `PORT=3002` in `.env` before starting.
+
+Portfolio content is stored in the `portfolio_db` Docker volume. The public page falls back to its seeded content when PostgreSQL is unavailable; admin writes require the database.
 
 ## Getting Started
 
